@@ -1,18 +1,47 @@
-﻿using PaymentGateway.Api.Models.Responses;
+﻿using System.Diagnostics;
+
+using PaymentGateway.Api.Models;
 
 namespace PaymentGateway.Api.Services;
 
-public class PaymentsRepository
+public interface IPaymentsRepository
 {
-    public List<PostPaymentResponse> Payments = new();
+    public void Add(StoredPayment payment);
+    public StoredPayment? Get(Guid id);
+}
+
+public class PaymentsRepository(ActivitySource activitySource, ILogger<PaymentsRepository> logger) : IPaymentsRepository
+{
+    private readonly HashSet<StoredPayment> _payments = [];
     
-    public void Add(PostPaymentResponse payment)
+    public void Add(StoredPayment payment)
     {
-        Payments.Add(payment);
+        activitySource.StartActivity();
+        
+        try
+        {
+            // Assumption: Id is unique so we should not be able to put duplicates in
+            _ = _payments.First(p => p.PaymentResponse.Id == payment.PaymentResponse.Id);
+            logger.LogWarning("Payment with {Id} already exists in repository", payment.PaymentResponse.Id);
+        }
+        catch (InvalidOperationException)
+        {
+            _payments.Add(payment);
+        }
     }
 
-    public PostPaymentResponse Get(Guid id)
+    public StoredPayment? Get(Guid id)
     {
-        return Payments.FirstOrDefault(p => p.Id == id);
+        activitySource.StartActivity();
+        
+        try
+        {
+            return _payments.First(p => p.PaymentResponse.Id == id);
+        }
+        catch (Exception e)
+        {
+            logger.LogError("Payment with {Id} not found in repository with {Exception}", id, e.Message);
+            return null;
+        }
     }
 }

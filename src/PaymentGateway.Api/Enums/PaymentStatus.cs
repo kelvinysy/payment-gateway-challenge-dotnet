@@ -1,5 +1,8 @@
-namespace PaymentGateway.Api.Models;
+using JetBrains.Annotations;
 
+namespace PaymentGateway.Api.Enums;
+
+[PublicAPI]
 public enum PaymentStatus
 {
     Authorized,

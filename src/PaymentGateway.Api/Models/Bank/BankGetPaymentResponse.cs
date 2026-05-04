@@ -1,11 +1,12 @@
-﻿using JetBrains.Annotations;
+using JetBrains.Annotations;
 
 using PaymentGateway.Api.Enums;
 
-namespace PaymentGateway.Api.Models.Responses;
+namespace PaymentGateway.Api.Models.Bank;
 
+// ReSharper disable InconsistentNaming
 [PublicAPI]
-public class PostPaymentResponse
+public class BankGetPaymentResponse
 {
     public Guid Id { get; set; }
     public PaymentStatus Status { get; set; }
@@ -14,4 +15,5 @@ public class PostPaymentResponse
     public int ExpiryYear { get; set; }
     public string Currency { get; set; } = "";
     public int Amount { get; set; }
+    public required string authorization_code { get; set; }
 }

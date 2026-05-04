@@ -1,5 +1,10 @@
-﻿namespace PaymentGateway.Api.Models.Responses;
+﻿using JetBrains.Annotations;
 
+using PaymentGateway.Api.Enums;
+
+namespace PaymentGateway.Api.Models.Responses;
+
+[PublicAPI]
 public class GetPaymentResponse
 {
     public Guid Id { get; set; }
@@ -7,6 +12,6 @@ public class GetPaymentResponse
     public int CardNumberLastFour { get; set; }
     public int ExpiryMonth { get; set; }
     public int ExpiryYear { get; set; }
-    public string Currency { get; set; }
+    public required string Currency { get; set; }
     public int Amount { get; set; }
 }

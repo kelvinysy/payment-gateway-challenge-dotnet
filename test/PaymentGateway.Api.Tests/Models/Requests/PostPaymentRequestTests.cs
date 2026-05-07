@@ -72,7 +72,7 @@ public class PostPaymentRequestTests
     [InlineData("123456789012345C")]
     [InlineData("ABCDEFGHIJKLMNOP")]
     [InlineData("1235!678-A1=34+5")]
-    public void Validate_NotNumbers_ReturnsError(string cardNumber)
+    public void Validate_CardNumberNotNumbers_ReturnsError(string cardNumber)
     {
         var request = new PostPaymentRequest
         {

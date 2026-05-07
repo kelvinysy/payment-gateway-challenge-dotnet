@@ -27,9 +27,11 @@ If time allows
 Add resilience to paymentsrepository http client - added retries
 add iso currency validation - done
 logs - done
-traces - done
+traces - done, used ai to help
 metrics - default ones from otel should work
 health checks - basic one, not sure if custom ones are required here
+transaction key so that if a client like the payment machine retries and sends several requests, they will have a guid key attached to the request, and repeated requests are returned early with the cached response - somewhat done
+
 
 
 Assumptions made
@@ -38,6 +40,7 @@ post request is on default endpoint, didn't seem to be mentioned anywhere
 get request is on endpoint as shown in existing code, didn't seem to be mentioned
 we validated the request parameters, so i changed the type of some of the Bank request and responses as an exercise
 bank will supply payment history if we don't have it
+clients will request PostPayments with a Unique Key, or we can ask them to
 
 
 Brain dump

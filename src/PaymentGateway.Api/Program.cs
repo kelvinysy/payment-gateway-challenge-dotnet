@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 
@@ -25,9 +27,21 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHealthChecks();
+
+var serviceName = "payment-gateway-challenge-dotnet";
+builder.Services.AddSingleton(new ActivitySource(serviceName));
+
 builder.Services.AddOpenTelemetry()
-    .ConfigureResource(resource => resource.AddService("payment-gateway-challenge-dotnet"))
+    .ConfigureResource(resource => 
+        resource
+            .AddService(serviceName)
+            .AddAttributes(new Dictionary<string, object>
+            {
+                { "service.version", "1.0.0" },
+                { "deployment.environment", builder.Environment.EnvironmentName }
+            }))
     .WithTracing(tracing => tracing
+        .AddSource(serviceName)
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddConsoleExporter());

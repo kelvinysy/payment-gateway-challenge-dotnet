@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 
 using PaymentGateway.Api.Models;
 
@@ -6,41 +7,67 @@ namespace PaymentGateway.Api.Services;
 
 public interface IPaymentsRepository
 {
-    public void Add(StoredPayment payment);
+    public StoredPayment Add(StoredPayment payment);
     public StoredPayment? Get(Guid id);
 }
 
 public class PaymentsRepository(ActivitySource activitySource, ILogger<PaymentsRepository> logger) : IPaymentsRepository
 {
-    private readonly HashSet<StoredPayment> _payments = [];
-    
-    public void Add(StoredPayment payment)
+    private readonly ConcurrentDictionary<Guid, StoredPayment> _payments = new();
+
+    public StoredPayment Add(StoredPayment payment)
     {
-        activitySource.StartActivity();
+        using var activity = activitySource.StartActivity();
+        activity?.AddTag("payment.id", payment.PaymentResponse.Id);
         
         try
         {
-            // Assumption: Id is unique so we should not be able to put duplicates in
-            _ = _payments.First(p => p.PaymentResponse.Id == payment.PaymentResponse.Id);
-            logger.LogWarning("Payment with {Id} already exists in repository", payment.PaymentResponse.Id);
+            var result = _payments.AddOrUpdate(
+                payment.PaymentResponse.Id,
+                payment,
+                (_, existingPayment) => existingPayment);
+            
+            if (!ReferenceEquals(result, payment))
+            {
+                activity?.AddTag("repository.action", "duplicate_detected");
+                logger.LogWarning("Payment with {Id} already exists in repository, returning existing payment", 
+                    payment.PaymentResponse.Id);
+                return result;
+            }
+
+            activity?.AddTag("repository.action", "add");
+            return payment;
         }
-        catch (InvalidOperationException)
+        catch (Exception ex)
         {
-            _payments.Add(payment);
+            activity?.AddTag("error", true);
+            activity?.AddTag("error.message", ex.Message);
+            logger.LogError(ex, "Error adding payment to repository");
+            throw;
         }
     }
 
     public StoredPayment? Get(Guid id)
     {
-        activitySource.StartActivity();
+        using var activity = activitySource.StartActivity();
+        activity?.AddTag("payment.id", id);
         
         try
         {
-            return _payments.First(p => p.PaymentResponse.Id == id);
+            if (_payments.TryGetValue(id, out var payment))
+            {
+                activity?.AddTag("repository.cache_hit", true);
+                return payment;
+            }
+
+            activity?.AddTag("repository.cache_hit", false);
+            return null;
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            logger.LogError("Payment with {Id} not found in repository with {Exception}", id, e.Message);
+            activity?.AddTag("error", true);
+            activity?.AddTag("error.message", ex.Message);
+            logger.LogError(ex, "Error retrieving payment from repository with id {Id}", id);
             return null;
         }
     }

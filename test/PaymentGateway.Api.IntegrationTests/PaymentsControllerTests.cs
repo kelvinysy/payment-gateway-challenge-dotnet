@@ -61,6 +61,8 @@ public class PaymentsControllerTests
                     services.AddSingleton<IPaymentsRepository>(paymentsRepository);
                 }))
             .CreateClient();
+        
+        _sut.DefaultRequestHeaders.Add("UniqueKey", Guid.NewGuid().ToString());
     }
 
     [Theory, AutoData]

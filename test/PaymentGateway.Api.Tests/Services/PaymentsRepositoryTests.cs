@@ -72,7 +72,6 @@ public class PaymentsRepositoryTests
         var result = _sut.Get(paymentResponse.PaymentResponse.Id);
 
         // Assert
-        Assert.NotNull(result);
         Assert.Equal(paymentResponse.PaymentResponse.Id, result!.PaymentResponse.Id);
         Assert.Equal(paymentResponse.PaymentResponse.Status, result.PaymentResponse.Status);
         Assert.Equal(paymentResponse.PaymentResponse.CardNumberLastFour, result.PaymentResponse.CardNumberLastFour);
@@ -80,5 +79,44 @@ public class PaymentsRepositoryTests
         Assert.Equal(paymentResponse.PaymentResponse.ExpiryYear, result.PaymentResponse.ExpiryYear);
         Assert.Equal(paymentResponse.PaymentResponse.Currency, result.PaymentResponse.Currency);
         Assert.Equal(paymentResponse.PaymentResponse.Amount, result.PaymentResponse.Amount);
+    }
+
+    [Theory, AutoData]
+    public void Add_ReturnsAddedPayment(StoredPayment paymentResponse)
+    {
+        // Arrange & Act
+        var result = _sut.Add(paymentResponse);
+        
+        // Assert
+        Assert.Equal(paymentResponse.PaymentResponse.Id, result.PaymentResponse.Id);
+        Assert.Equal(paymentResponse.PaymentResponse.Status, result.PaymentResponse.Status);
+        Assert.Equal(paymentResponse.PaymentResponse.CardNumberLastFour, result.PaymentResponse.CardNumberLastFour);
+        Assert.Equal(paymentResponse.PaymentResponse.ExpiryMonth, result.PaymentResponse.ExpiryMonth);
+        Assert.Equal(paymentResponse.PaymentResponse.ExpiryYear, result.PaymentResponse.ExpiryYear);
+        Assert.Equal(paymentResponse.PaymentResponse.Currency, result.PaymentResponse.Currency);
+        Assert.Equal(paymentResponse.PaymentResponse.Amount, result.PaymentResponse.Amount);
+    }
+
+    [Theory, AutoData]
+    public void Add_ReturnsNewPaymentIfOneAlreadyExists(StoredPayment paymentResponse, StoredPayment storedPayment)
+    {
+        // Arrange
+
+        // Act
+        var result = _sut.Add(storedPayment);
+
+
+        // Act
+        var secondResult = _sut.Add(paymentResponse);
+
+        // Assert
+        Assert.Equal(result.PaymentResponse.Id, storedPayment.PaymentResponse.Id);
+        Assert.Equal(paymentResponse.PaymentResponse.Id, secondResult.PaymentResponse.Id);
+        Assert.Equal(paymentResponse.PaymentResponse.Status, secondResult.PaymentResponse.Status);
+        Assert.Equal(paymentResponse.PaymentResponse.CardNumberLastFour, secondResult.PaymentResponse.CardNumberLastFour);
+        Assert.Equal(paymentResponse.PaymentResponse.ExpiryMonth, secondResult.PaymentResponse.ExpiryMonth);
+        Assert.Equal(paymentResponse.PaymentResponse.ExpiryYear, secondResult.PaymentResponse.ExpiryYear);
+        Assert.Equal(paymentResponse.PaymentResponse.Currency, secondResult.PaymentResponse.Currency);
+        Assert.Equal(paymentResponse.PaymentResponse.Amount, secondResult.PaymentResponse.Amount);
     }
 }

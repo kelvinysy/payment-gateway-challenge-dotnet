@@ -11,6 +11,7 @@ using Moq;
 using Moq.Protected;
 
 using PaymentGateway.Api.Enums;
+using PaymentGateway.Api.Extensions;
 using PaymentGateway.Api.Models;
 using PaymentGateway.Api.Models.Bank;
 using PaymentGateway.Api.Models.Requests;
@@ -33,6 +34,9 @@ public class PaymentProcessorTests
         _paymentsRepository = new Mock<IPaymentsRepository>();
         Mock<ILogger<PaymentProcessor>> mockLogger = new();
 
+        _paymentsRepository.Setup(x => x.Add(It.IsAny<StoredPayment>()))
+            .Returns((StoredPayment storedPayment) => storedPayment);
+
         BankOptions bankOptions = new()
         {
             BaseUrl = "http://bank.local", PaymentsEndpoint = "http://bank.local/payments"
@@ -53,8 +57,9 @@ public class PaymentProcessorTests
         PaymentStatus status, int cvv, string authorizationCode)
     {
         // Arrange
-        var postPaymentRequest = new PostPaymentRequest
+        var postPaymentRequest = new PaymentRequest
         {
+            Id = Guid.NewGuid(),
             CardNumber = "1234123412347890",
             ExpiryMonth = 12,
             ExpiryYear = 2025,
@@ -62,7 +67,7 @@ public class PaymentProcessorTests
             Amount = amount,
             Cvv = cvv
         };
-        var cardNumberLastFour = int.Parse(postPaymentRequest.CardNumber[^4..]);
+        var cardNumberLastFour = int.Parse(postPaymentRequest.CardNumber.ToCardNumberLastFour());
 
         var bankResponse = new BankPostPaymentResponse
         {
@@ -87,6 +92,7 @@ public class PaymentProcessorTests
         // Assert
         Assert.Equal(status == PaymentStatus.Authorized ? PaymentStatus.Authorized : PaymentStatus.Declined,
             result.Status);
+        Assert.Equal(postPaymentRequest.Id, result.Id);
         Assert.Equal(cardNumberLastFour, result.CardNumberLastFour);
         Assert.Equal(postPaymentRequest.ExpiryMonth, result.ExpiryMonth);
         Assert.Equal(postPaymentRequest.ExpiryYear, result.ExpiryYear);
@@ -95,63 +101,13 @@ public class PaymentProcessorTests
     }
 
     [Theory, AutoData]
-    public async Task ProcessPayment_GeneratesNewId_OnSuccess(string currency, int amount, PaymentStatus status,
-        int cvv, string authorizationCode)
-    {
-        // Arrange
-        var postPaymentRequest = new PostPaymentRequest
-        {
-            CardNumber = "1234123412347890",
-            ExpiryMonth = 12,
-            ExpiryYear = 2025,
-            Currency = currency,
-            Amount = amount,
-            Cvv = cvv
-        };
-        var secondPostPaymentRequest = new PostPaymentRequest
-        {
-            CardNumber = "1234123412347890",
-            ExpiryMonth = 12,
-            ExpiryYear = 2025,
-            Currency = currency,
-            Amount = amount + 100,
-            Cvv = cvv
-        };
-
-        var bankResponse = new BankPostPaymentResponse
-        {
-            Authorized = status == PaymentStatus.Authorized, authorization_code = authorizationCode
-        };
-
-        _httpMessageHandlerMock
-            .Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(() =>
-            {
-                var httpResponseMessage = new HttpResponseMessage(HttpStatusCode.OK);
-                httpResponseMessage.Content = new StringContent(JsonSerializer.Serialize(bankResponse));
-                httpResponseMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                return httpResponseMessage;
-            });
-
-        // Act
-        var result = await _sut.ProcessPayment(postPaymentRequest);
-        var secondResult = await _sut.ProcessPayment(secondPostPaymentRequest);
-
-        // Assert
-        Assert.NotEqual(result.Id, secondResult.Id);
-    }
-
-    [Theory, AutoData]
     public async Task ProcessPayment_AddsPaymentResponseToPaymentsRepository(string currency,
         int amount, PaymentStatus status, int cvv, string authorizationCode)
     {
         // Arrange
-        var postPaymentRequest = new PostPaymentRequest
+        var postPaymentRequest = new PaymentRequest
         {
+            Id = Guid.NewGuid(),
             CardNumber = "1234123412347890",
             ExpiryMonth = 12,
             ExpiryYear = 2025,
@@ -346,8 +302,9 @@ public class PaymentProcessorTests
         int cvv)
     {
         // Arrange
-        var postPaymentRequest = new PostPaymentRequest
+        var postPaymentRequest = new PaymentRequest
         {
+            Id = Guid.NewGuid(),
             CardNumber = "1234123412347890",
             ExpiryMonth = 12,
             ExpiryYear = 2025,
